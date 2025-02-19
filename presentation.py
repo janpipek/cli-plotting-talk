@@ -104,7 +104,7 @@ class Code():
 
     @cached_property
     def source(self) -> str:
-        return Path(self.path).read_text()
+        return Path(self.path).read_text(encoding="utf-8")
 
     def __str__(self) -> str:
         return f"```python\n{self.source}\n```"
@@ -115,6 +115,7 @@ class Code():
 
 SLIDES = [
     Path("slides/title.md"),
+    Code("slides/colours1.py"),
     Code("slides/hello.py"),
     "Thank you!"
 ]
