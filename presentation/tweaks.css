@@ -1,0 +1,26 @@
+
+section {
+    font-family: Inconsolata !important;
+    /* font-family: Inconsolata !important; */
+}
+
+code {
+    font-family: Inconsolata !important;
+}
+
+.title-page {
+    font-size: 200%;
+    background-color: blue;
+    color: white;
+    font-family: "Joystix Monospace" !important;
+}
+
+.title-page h1 {
+    font-family: Inconsolata !important;
+    letter-spacing: .1em;
+    color: white;
+}
+
+h1 {
+    font-family: "Joystix Monospace" !important;
+}
