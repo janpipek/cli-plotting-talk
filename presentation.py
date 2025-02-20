@@ -43,8 +43,13 @@ class PresentationApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header(show_clock=True)
-        yield Markdown(self.render_slide(SLIDES[0]), id="content")
+        yield Markdown("Loading...", id="content")
         yield Footer()
+
+    def on_mount(self) -> None:
+        """Hook called when the app is mounted."""
+        self.theme = "textual-light"
+        self.update_slide()
 
     @staticmethod
     def render_slide(s: Any) -> str:
@@ -92,7 +97,6 @@ class PresentationApp(App):
         content_widget.update(self.render_slide(SLIDES[self.slide_index]))
 
 
-
 def main():
     app = PresentationApp()
     app.run()
@@ -116,6 +120,8 @@ class Code():
 SLIDES = [
     Path("slides/title.md"),
     Code("slides/hello.py"),
+    Code("slides/hello2.py"),
+    Code("slides/kitty.py"),
     "Thank you!"
 ]
 
