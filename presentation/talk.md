@@ -19,6 +19,12 @@ marp: true
 
 <!-- class: normal-page -->
 
+<img src="spurious.png" alt="Spurious correlation CLI plot" width="80%">
+
+Adopted from Tyler Vigen's Spurious correlations
+
+---
+
 # Why?
 
 ---

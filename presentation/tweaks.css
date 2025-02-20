@@ -10,17 +10,21 @@ code {
 
 .title-page {
     font-size: 200%;
-    background-color: blue;
-    color: white;
+    background-color: blue !important;
+    color: white !important;
     font-family: "Joystix Monospace" !important;
 }
 
 .title-page h1 {
     font-family: Inconsolata !important;
     letter-spacing: .1em;
-    color: white;
+    color: white !important;
 }
 
 h1 {
     font-family: "Joystix Monospace" !important;
+}
+
+code {
+    background-color: #d0d0a0 !important;
 }
