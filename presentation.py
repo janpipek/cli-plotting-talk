@@ -1,19 +1,19 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from functools import cached_property
 from pathlib import Path
 from textwrap import dedent
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Optional
+from typing_extensions import Literal, override
 
 from rich.prompt import Prompt
-from plotext import sleep
-from plottypus.core import PlotType, Backend
-from plottypus.plotting import plot
 
-from rich import console
 from rich.text import Text
-from rich.console import Capture, Console
+from rich.console import Console
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header, Markdown
+from textual.containers import Container
+from textual.widget import Widget
+from textual.widgets import Footer, Header, Markdown, Static, _markdown
 
 from typing import Any
 
@@ -24,7 +24,7 @@ class PresentationApp(App):
     BINDINGS = [
         ("pageup", "prev_slide", "Previous"),
         ("pagedown", "next_slide", "Next"),
-        ("r", "run", "Run"),
+        (".", "run", "Run"),
         ("q", "quit", "Quit"),
         ("home", "home", "First slide"),
         ("d", "toggle_dark", "Toggle dark mode")
@@ -43,21 +43,13 @@ class PresentationApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header(show_clock=True)
-        yield Markdown("Loading...", id="content")
+        yield Container(Markdown("Loading..."), id="content")
         yield Footer()
 
     def on_mount(self) -> None:
         """Hook called when the app is mounted."""
-        self.theme = "textual-light"
+        self.theme = "textual-dark"
         self.update_slide()
-
-    @staticmethod
-    def render_slide(s: Any) -> str:
-        if isinstance(s, str):
-            return dedent(s)
-        if isinstance(s, Path):
-            return s.read_text()
-        return str(s)
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
@@ -82,19 +74,14 @@ class PresentationApp(App):
         return SLIDES[self.slide_index]
 
     def action_run(self) -> None:
-        code_path = self.current_slide.path
-        with self.suspend():
-            console = Console()
-            console.clear()
-            code = Code(code_path)
-            code.run()
-            Prompt.ask("[yellow]Press Enter to continue...[/yellow]")
-        # self.action_next_slide()
+        self.current_slide.run(self)
         self.refresh()
 
     def update_slide(self):
-        content_widget = self.query_one("#content", Markdown)
-        content_widget.update(self.render_slide(SLIDES[self.slide_index]))
+        container_widget = self.query_one("#content", Container)
+        content_widget = SLIDES[self.slide_index].render()
+        container_widget.remove_children()
+        container_widget.mount(content_widget)
 
 
 def main():
@@ -102,28 +89,75 @@ def main():
     app.run()
 
 
+@dataclass()
+class Slide(ABC):
+    path: Optional[str | Path] = field(default=None, kw_only=True)
+    source: str = ""
+
+    def __post_init__(self):
+        if self.path:
+            self.source = Path(self.path).read_text(encoding="utf-8")
+
+    @abstractmethod
+    def render(self) -> Widget:
+        ...
+
+    def is_runnable(self) -> bool:
+        return False
+
+    def run(self, app: PresentationApp) -> None:
+        pass
+
+
 @dataclass
-class Code():
-    path: str
+class CodeSlide(Slide):
+    language: str = "python"
 
-    @cached_property
-    def source(self) -> str:
-        return Path(self.path).read_text(encoding="utf-8")
+    def render(self) -> Widget:
+        return self._render_code()
 
-    def __str__(self) -> str:
-        return f"```python\n{self.source}\n```"
+    def _render_code(self) -> Markdown:
+        return Markdown(f"```{self.language}\n{self.source.strip()}\n```")
 
-    def run(self) -> None:
-        exec(self.source)
+    def run(self, app: PresentationApp) -> None:
+        with app.suspend():
+            console = Console()
+            console.clear()
+            exec(self.source)
+            Prompt.ask("[yellow]Press Enter to continue...[/yellow]")
+
+
+@dataclass
+class DynamicSlide(CodeSlide):
+    mode: Literal["code", "output"]= "output"
+
+    def _render_output(self) -> Widget:
+        console = Console()
+        with console.capture() as capture:
+            exec(self.source)
+        return Static(Text.from_ansi(capture.get()))
+
+    def render(self):
+        match self.mode:
+            case "code":
+                return self._render_code()
+            case "output":
+                return self._render_output()
+
+
+class MarkdownSlide(Slide):
+    def render(self):
+        return Markdown(dedent(self.source))
 
 
 SLIDES = [
-    Path("slides/title.md"),
-    Code("slides/colours1.py"),
-    Code("slides/hello.py"),
-    Code("slides/hello2.py"),
-    Code("slides/kitty.py"),
-    "Thank you!"
+    MarkdownSlide(path="slides/title.md"),
+    # DynamicSlide(path="examples/spurious_correlations.py"),
+    CodeSlide(path="slides/colours1.py"),
+    CodeSlide(path="slides/hello.py"),
+    CodeSlide(path="slides/hello2.py"),
+    CodeSlide(path="slides/kitty.py"),
+    MarkdownSlide("Thank you!")
 ]
 
 

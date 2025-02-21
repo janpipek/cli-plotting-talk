@@ -3,6 +3,8 @@ marp: true
 
 ---
 
+<!-- theme: uncover -->
+
 <!-- class: title-page -->
 
 <style>
@@ -21,23 +23,9 @@ marp: true
 
 <img src="spurious.png" alt="Spurious correlation CLI plot" width="80%">
 
-Adopted from Tyler Vigen's Spurious correlations
-
 ---
 
 # Why?
-
----
-
-
-
----
-
-
-
-```
-x = 7
-```
 
 ---
 
@@ -45,12 +33,9 @@ x = 7
 
 ---
 
-## Terminal
+## Modern Terminal
 
 - ANSI codes
-
----
-
 - Normal / alternate buffer
 
 ---
@@ -63,23 +48,27 @@ ASCII
 . / - \ + # o
 ```
 
-- Unicode (sometimes?)
+Unicode
+
+```
+
+```
 
 ---
 
 ## Colours
 
 - 16 default colours (customisable!)
-- 240
+
+- 240 additional colours (fixed palette)
+
 - 24bit true colours
 
 ---
 
-## Limitations
+# Enough reinventing the wheel
 
----
-
-# Reinvent the wheel?
+<img src="circle.png" alt="Spurious correlation CLI plot" width="25%">
 
 ---
 
@@ -95,14 +84,12 @@ ASCII
 
 ---
 
+## ...you could actually display any matplotlib plot in the terminal?
+
+🙈
 
 ---
 
 ## kitty protocol
 
-
-
----
-
-# Your turn
-
+:neo-disapproving-face:
