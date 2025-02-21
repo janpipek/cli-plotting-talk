@@ -1,9 +1,16 @@
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "plotext",
+#     "plottypus[kitty,notcurses]",
+#     "textual",
+# ]
+# ///
 from abc import ABC, abstractmethod
 from pathlib import Path
 from textwrap import dedent
 from dataclasses import dataclass, field
-from typing import Optional
-from typing_extensions import Literal
+from typing import Optional, ClassVar, Literal
 
 
 from rich.text import Text
@@ -47,7 +54,7 @@ class PresentationApp(App):
 
     def on_mount(self) -> None:
         """Hook called when the app is mounted."""
-        self.theme = "textual-dark"
+        self.theme = "textual-light"
         self.update_slide()
 
     def action_toggle_dark(self) -> None:
@@ -81,9 +88,10 @@ class PresentationApp(App):
         return SLIDES[self.slide_index]
 
     def action_run(self) -> None:
-        self.current_slide.run()
-        self.update_slide()
-        self.refresh()
+        if self.current_slide.runnable:
+            self.current_slide.run()
+            self.update_slide()
+            self.refresh()
 
     def update_slide(self):
         container_widget = self.query_one("#content", Center)
@@ -101,6 +109,7 @@ def main():
 class Slide(ABC):
     path: Optional[str | Path] = field(default=None, kw_only=True)
     source: str = ""
+    runnable: ClassVar[bool] = False
 
     def __post_init__(self):
         if self.path:
@@ -127,6 +136,8 @@ class CodeSlide(Slide):
     language: str = "python"
     mode: Literal["code", "output"]= "code"
     requires_alt_screen: bool = False
+    runnable: ClassVar[bool] = True
+    wait_for_key: bool = True
 
     def render(self, app) -> Widget:
         match self.mode:
@@ -148,11 +159,22 @@ class CodeSlide(Slide):
         f = io.StringIO()
         with redirect_stdout(f):
             import plotext as plt
-            plt.plotsize()
-            exec(self.source)
+            plt.plotsize(
+                width=50,
+                height=15
+            )
+            self._exec()
         output = f.getvalue()
         output = "\n".join(line.rstrip() for line in output.splitlines())
         return Static(Text.from_ansi(output))
+    
+    def _exec(self):
+        match self.language:
+            case "python":
+                exec(self.source)
+            case "shell":
+                import os
+                os.system(self.source)
 
     def run(self):
         self.mode = "output" if self.mode == "code" else "code"
@@ -161,9 +183,10 @@ class CodeSlide(Slide):
         with app.suspend():
             console = Console()
             console.clear()
-            exec(self.source)
-            console.control()
-            self._wait_for_key()
+            self._exec()
+            if self.wait_for_key:
+                self._wait_for_key()
+            console.clear()
 
     def _wait_for_key(self):
         import sys
@@ -184,17 +207,44 @@ class MarkdownSlide(Slide):
     def render(self, app: App) -> Markdown:
         return Markdown(dedent(self.source))
 
+def md(path_or_text: str, **kwargs):
+    if Path(path_or_text).exists():
+        kwargs["path"] = path_or_text
+    else:
+        kwargs["source"] = path_or_text
+    return MarkdownSlide(**kwargs)
+
+def py(path_or_text: str, **kwargs):
+    kwargs = {
+        "language": "python",
+        **kwargs,
+    }
+    if Path(path_or_text).exists():
+        kwargs["path"] = path_or_text
+    else:
+        kwargs["source"] = path_or_text
+    return CodeSlide(**kwargs)
+
+def sh(cmd, **kwargs):
+    kwargs = {
+        "language": "shell",
+        **kwargs,
+    }
+    return CodeSlide(source=cmd, **kwargs)
+
 
 SLIDES = [
-    MarkdownSlide(path="slides/title.md"),
-    CodeSlide(path="examples/spurious_correlations.py", mode="output"),
-    MarkdownSlide("## Colours"),
-    CodeSlide('print("\\033[31m Red text \\033[0m")  # Red text'),
-    CodeSlide(path="slides/colours1.py"),
-    CodeSlide(path="slides/hello.py"),
-    CodeSlide(path="slides/hello2.py"),
-    CodeSlide(path="slides/kitty.py", requires_alt_screen=True),
-    MarkdownSlide("Thank you!")
+    # TODO: Read from toml/yaml, ...
+    md("slides/title.md"),
+    py("examples/spurious_correlations.py", mode="output"),
+    sh("ytop -I 1/20", language="shell", requires_alt_screen=True, wait_for_key=False),
+    md("## Colours"),
+    py('print("\\033[31m Red text \\033[0m")  # Red text'),
+    py("slides/colours1.py"),
+    py("slides/hello.py"),
+    py("slides/hello2.py"),
+    py("slides/kitty.py", requires_alt_screen=True),
+    md("# Thank you!")
 ]
 
 
