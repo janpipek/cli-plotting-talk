@@ -9,7 +9,7 @@ import click
 from rich.text import Text
 from rich.console import Console
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Footer, Markdown, Static
 from rich.panel import Panel
@@ -53,6 +53,7 @@ class PresentationApp(App):
         ("q", "quit", "Quit"),
         ("home", "home", "First slide"),
         ("e", "edit", "Edit"),
+        ("r", "reload", "Reload"),
         # ("d", "toggle_dark", "Toggle dark mode")
     ]
 
@@ -69,7 +70,7 @@ class PresentationApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         # yield Header(show_clock=True)
-        yield Container(Markdown("Loading..."), id="content")
+        yield VerticalScroll(Markdown("Loading..."), id="content")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -87,6 +88,10 @@ class PresentationApp(App):
         self.theme = (
             "textual-dark" if self.theme == "textual-light" else "textual-light"
         )
+
+    def action_reload(self) -> None:
+        self.current_slide.reload()
+        self.update_slide()
 
     def action_next_slide(self) -> None:
         self.switch_to_slide(min(self.slide_index + 1, len(SLIDES) - 1))
@@ -124,7 +129,7 @@ class PresentationApp(App):
 
     def update_slide(self):
         try:
-            container_widget = self.query_one("#content", Container)
+            container_widget = self.query_one("#content", VerticalScroll)
             content_widget = SLIDES[self.slide_index].render(app=self)
             container_widget.remove_children()
             container_widget.mount(content_widget)
@@ -385,7 +390,7 @@ SLIDES = [
     md("slides/colours.md"),
     py("slides/colours1.py"),
     py("slides/colours256.py", mode="output"),
-    py("slides/colours_rich.py", mode="output"),
+    py("slides/colours_rich.py"),
     md("## Example: Simple scatter plot\nMap of Czech cities"),
     py("slides/simple_scatter.py"),
     md("## Example: Add the path of my train trip to Brno"),
