@@ -1,17 +1,15 @@
 from abc import ABC, abstractmethod
-from functools import cached_property
 from pathlib import Path
 from textwrap import dedent
 from dataclasses import dataclass, field
 from typing import Optional
-from typing_extensions import Literal, override
+from typing_extensions import Literal
 
-from rich.prompt import Prompt
 
 from rich.text import Text
 from rich.console import Console
 from textual.app import App, ComposeResult
-from textual.containers import Container, Center
+from textual.containers import Center
 from textual.widget import Widget
 from textual.widgets import Footer, Header, Markdown, Static
 
