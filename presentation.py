@@ -74,7 +74,7 @@ class PresentationApp(App):
 
     def on_mount(self) -> None:
         """Hook called when the app is mounted."""
-        self.register_theme(my_theme) 
+        self.register_theme(my_theme)
         self.theme = "my"
         self.update_slide()
 
@@ -107,6 +107,7 @@ class PresentationApp(App):
         if self.current_slide.path:
             with self.suspend():
                 import os
+
                 os.system(f"$EDITOR {self.current_slide.path}")
             self.current_slide.reload()
         self.update_slide()
@@ -133,7 +134,9 @@ class PresentationApp(App):
 
 
 @click.command()
-@click.option("--continue", "-c", "continue_", is_flag=True, help="Enable debug mode.")
+@click.option(
+    "--continue", "-c", "continue_", is_flag=True, help="Enable debug mode."
+)
 def main(continue_):
     app = PresentationApp()
     if continue_ and Path(".current_slide").exists():
@@ -152,14 +155,12 @@ class Slide(ABC):
         if self.path:
             self.source = Path(self.path).read_text(encoding="utf-8")
 
-
     def reload(self):
         if self.path:
             self.source = Path(self.path).read_text(encoding="utf-8")
 
     @abstractmethod
-    def render(self, app: App) -> Widget:
-        ...
+    def render(self, app: App) -> Widget: ...
 
     def is_runnable(self) -> bool:
         return False
@@ -171,7 +172,7 @@ class Slide(ABC):
 @dataclass
 class CodeSlide(Slide):
     language: str = "python"
-    mode: Literal["code", "output"]= "code"
+    mode: Literal["code", "output"] = "code"
     requires_alt_screen: bool = False
     runnable: ClassVar[bool] = True
     wait_for_key: bool = True
@@ -185,41 +186,51 @@ class CodeSlide(Slide):
                 if self.requires_alt_screen:
                     self._exec_in_alternate_screen(app)
                     return self._render_code()
-                return self._render_output()
+                return self._render_output(app=app)
 
     def _render_code(self) -> Markdown:
+        code = "\n".join(
+            " " + line.rstrip()
+            for line in self.source.splitlines()
+            if "# HIDE" not in line
+        )
         if self.title:
-            return Markdown(f"## {self.title}\n\n```{self.language}\n{self.source.strip()}\n```")
-        return Markdown(f"```{self.language}\n{self.source.strip()}\n```")
+            return Markdown(
+                f"## {self.title}\n\n```{self.language}\n{code}\n```"
+            )
+        return Markdown(f"```{self.language}\n{code}\n```")
 
-    def _render_output(self) -> Widget:
+    def _render_output(self, app) -> Widget:
         import io
         from contextlib import redirect_stdout
 
         f = io.StringIO()
         with redirect_stdout(f):
             import plotext as plt
-            plt.plotsize(
-                width=50,
-                height=15
-            )
-            self._exec()
+
+            plt.plotsize(width=50, height=15)
+            self._exec(app=app)
         output = f.getvalue()
         output = "\n".join(" " + line.rstrip() for line in output.splitlines())
         output_widget = Static(Text.from_ansi(output))
         if self.title:
-            return Container(
-                Markdown(f"## {self.title}"),
-                output_widget
-            )
+            return Container(Markdown(f"## {self.title}"), output_widget)
         return output_widget
 
-    def _exec(self):
+    def _exec(self, app: App) -> None:
         match self.language:
             case "python":
-                exec(self.source)
+                exec(
+                    self.source,
+                    globals=globals()
+                    | {
+                        "WIDTH": app.size.width - 4,
+                        "HEIGHT": app.size.height - 2,
+                    },
+                )
             case "shell":
                 import os
+
                 os.system(self.source)
 
     def run(self):
@@ -253,11 +264,12 @@ class MarkdownSlide(Slide):
     def render(self, app: App) -> Markdown:
         return Markdown(dedent(self.source))
 
+
 @dataclass
 class FuncSlide(Slide):
     f: Callable[[App], Markdown | Text | str] = field(kw_only=True)
-    source = ""   # ignored
-    path = None   # ignored
+    source = ""  # ignored
+    path = None  # ignored
 
     def render(self, app: App):
         rendered = self.f(app)
@@ -299,6 +311,7 @@ def terminal_is_your_weapon(app: App):
         
     """
 
+
 @dyn_md
 def colours(app: App):
     out = io.StringIO()
@@ -319,6 +332,7 @@ def md(path_or_text: str, **kwargs):
         kwargs["source"] = path_or_text
     return MarkdownSlide(**kwargs)
 
+
 def py(path_or_text: str, **kwargs):
     kwargs = {
         "language": "python",
@@ -331,6 +345,7 @@ def py(path_or_text: str, **kwargs):
     else:
         kwargs["source"] = path_or_text
     return CodeSlide(**kwargs)
+
 
 def sh(cmd, **kwargs):
     kwargs = {
@@ -347,7 +362,13 @@ SLIDES = [
     md("# Why?"),
     md("## 1) It's cool."),
     # md("## 2) Others use it too."),
-    sh("ytop -I 1/20", title="2) Others use it too.", language="shell", requires_alt_screen=True, wait_for_key=False),
+    sh(
+        "ytop -I 1/20",
+        title="2) Others use it too.",
+        language="shell",
+        requires_alt_screen=True,
+        wait_for_key=False,
+    ),
     md("## 3) Quickly visualise your script output"),
     md("## 4) Create embeddable ASCII plots"),
     md("# How?"),
@@ -362,12 +383,13 @@ SLIDES = [
     md("## Example: Simple scatter plot\nMap of Czech cities"),
     py("slides/simple_scatter.py"),
     md("# Aren't we reinventing the wheel?"),
-    py("slides/hello.py"),
-    py("slides/hello2.py"),
+    md("slides/libraries.md"),
+    py("slides/plotille_line.py"),
+    py("slides/physt_heatmap.py"),
     md("## What if..."),
     md("## ...we could actually use matplotlib in the terminal?"),
     py("slides/kitty.py", requires_alt_screen=True),
-    md("# Thank you!")
+    md("# Thank you!"),
 ]
 
 

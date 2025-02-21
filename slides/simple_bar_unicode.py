@@ -1,6 +1,9 @@
 # Some data
 import pandas as pd
-df = pd.read_csv("cities.csv", index_col="city").sort_values("population", ascending=False)
+
+df = pd.read_csv("cities.csv", index_col="city").sort_values(
+    "population", ascending=False
+)
 data = df.iloc[:20]["population"].to_dict()
 
 # Some measurements

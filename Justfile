@@ -18,3 +18,6 @@ watch:
 
 example-spurious:
     uv run examples/spurious_correlations.py
+
+format:
+    uvx ruff format presentation.py slides/*.py
