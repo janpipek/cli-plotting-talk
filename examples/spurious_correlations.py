@@ -1,19 +1,7 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "plotext",
-#     "polars",
-#     "rich",
-# ]
-# ///
-import polars as pl
-
-# -- HIDE_ABOVE
+import polars as pl  # HIDE
 import plotext as plt
 
-plt.clear_figure()
-
+plt.clear_figure()   # HIDE
 data = pl.read_csv("spurious_correlations.csv")
 plt.plot(
     data["Year"], data["Fuel Used"], label="Jet fuel used in Czechia", yside="left"

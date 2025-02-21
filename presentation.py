@@ -205,13 +205,17 @@ class CodeSlide(Slide):
         from contextlib import redirect_stdout
 
         f = io.StringIO()
-        with redirect_stdout(f):
-            import plotext as plt
+        try:
+            with redirect_stdout(f):
+                import plotext as plt
 
-            plt.plotsize(width=50, height=15)
-            self._exec(app=app)
-        output = f.getvalue()
-        output = "\n".join(" " + line.rstrip() for line in output.splitlines())
+                plt.plotsize(width=50, height=15)
+                self._exec(app=app)
+            output = f.getvalue()
+        except Exception as ex:
+            output = f"Error: {ex}"
+        else:
+            output = "\n".join(" " + line.rstrip() for line in output.splitlines())
         output_widget = Static(Text.from_ansi(output))
         if self.title:
             return Container(Markdown(f"## {self.title}"), output_widget)
@@ -228,6 +232,8 @@ class CodeSlide(Slide):
                         "HEIGHT": app.size.height - 2,
                     },
                 )
+                import plotext as plt
+                plt.clear_figure()
             case "shell":
                 import os
 
@@ -240,7 +246,7 @@ class CodeSlide(Slide):
         with app.suspend():
             console = Console()
             console.clear()
-            self._exec()
+            self._exec(app)
             if self.wait_for_key:
                 self._wait_for_key()
             self.mode = "code"
@@ -358,9 +364,9 @@ def sh(cmd, **kwargs):
 SLIDES = [
     # TODO: Read from toml/yaml, ...
     md("slides/title.md"),
-    py("examples/spurious_correlations.py", mode="output"),
+    py("examples/spurious_correlations.py", title="Czech jet fuel consumption vs successful climbs of Mt. Everest", mode="output"),
     md("# Why?"),
-    md("## 1) It's cool."),
+    py("slides/neo.py", title="1) It's cool.", mode="output"),
     # md("## 2) Others use it too."),
     sh(
         "ytop -I 1/20",
@@ -378,18 +384,23 @@ SLIDES = [
     py("slides/simple_bar_unicode.py", mode="output"),
     md("slides/colours.md"),
     py("slides/colours1.py"),
-    py("slides/colours2.py", mode="output"),
+    py("slides/colours256.py", mode="output"),
     py("slides/colours_rich.py", mode="output"),
     md("## Example: Simple scatter plot\nMap of Czech cities"),
     py("slides/simple_scatter.py"),
+    md("## Example: Add the path of my train trip to Brno"),
     md("# Aren't we reinventing the wheel?"),
     md("slides/libraries.md"),
-    py("slides/plotille_line.py"),
-    py("slides/physt_heatmap.py"),
+    py("slides/plotille_line.py", requires_alt_screen=True),
+    py("slides/plotille_hist.py"),
+    py("examples/spurious_correlations.py"),
+    py("slides/plotext_hist.py"),
+    py("slides/plotext_lines.py", requires_alt_screen=True),
     md("## What if..."),
-    md("## ...we could actually use matplotlib in the terminal?"),
+    md("## ...we could actually use matplotlib in the terminal?\nkitty save us!"),
     py("slides/kitty.py", requires_alt_screen=True),
-    md("# Thank you!"),
+    md("slides/final.md"),
+    md("slides/references.md")
 ]
 
 

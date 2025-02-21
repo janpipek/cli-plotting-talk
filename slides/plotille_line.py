@@ -1,25 +1,18 @@
+import pandas as pd # HIDE
 import plotille
-import pandas as pd  # HIDE
 
-# HIDE
-data = pd.read_csv("spurious_correlations.csv")  # HIDE
+df = pd.read_csv("cities.csv", index_col="city")  # HIDE
 
 fig = plotille.Figure()
-try:  # HIDE
-    fig.width = WIDTH - 10  # HIDE
-    fig.height = HEIGHT - 5  # HIDE
-except:  # HIDE
-    None  # HIDE
+fig.width = 58  # WIDTH - 5   # HIDE
+fig.height = 15  # HEIGHT     # HIDE
+fig.scatter(df["longitude"], df["latitude"], label="Cities")
+trip_df = df.loc[["Praha", "Pardubice", "Česká Třebová", "Brno"]]
 fig.plot(
-    data["Year"],
-    data["Everest Climbs"],
-    lc=200,
-    label="Total Number of Successful Mount Everest Climbs",
-)
-fig.plot(
-    data["Year"],
-    data["Fuel Used"],
-    lc=200,
-    label="Jet fuel used in Czechia",
+    trip_df["longitude"],
+    trip_df["latitude"],
+    lc="blue",
+    marker="⌂",
+    label="Train trip",
 )
 print(fig.show(legend=True))

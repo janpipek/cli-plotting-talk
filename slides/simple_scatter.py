@@ -1,6 +1,6 @@
-import pandas as pd
+import pandas as pd # HIDE
 import numpy as np  # HIDE
-
+# HIDE
 df = pd.read_csv("cities.csv", index_col="city")  # HIDE
 # Prepare the plotting area
 min_lat, max_lat = int(df["latitude"].min()), int(df["latitude"].max()) + 1

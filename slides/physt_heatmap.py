@@ -1,9 +1,9 @@
-from plottypus.plotting import plot
-from plottypus.core import PlotType, Backend
-import polars as pl
+import pandas as pd
 import numpy as np
+from physt import h2
 
-df = pl.DataFrame(
-    {"a": np.random.normal(size=100), "b": np.random.normal(size=100)}
-)
-plot(df=df, x="a", y="b", type=PlotType.HEATMAP, backend=Backend.PHYST)
+df = pd.read_csv("examples/worldcities.csv.zip")
+h = h2(df["lat"], df["lng"], "fixed_width", bin_width=10, range=((-180, 180), (-60, 60)), weight=df["population"])
+print(h)
+h.plot(backend="ascii")
+ 
