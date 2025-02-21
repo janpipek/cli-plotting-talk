@@ -1,6 +1,7 @@
 # Some data
 import rich
 
+
 data = {"Praha": 1.3, "Brno": 0.4, "Ostrava": 0.3, "Plzeň": 0.2, "Liberec": 0.1}
 
 label_width = max(len(label) for label in data)

@@ -21,7 +21,7 @@ data = pl.DataFrame({
     "Total Number of Successful Mount Everest Climbs": [129,51,83,95,85,121,118,145,182,159,267,337,307,493,633,423,457,543,542,],
 })
 
-plt.title("Spurious correlations")
+# plt.title("Spurious correlations")
 plt.plot(
     data["Year"],
     data["Jet fuel used in Czechia"],

@@ -1,12 +1,3 @@
-# /// script
-# requires-python = ">=3.13"
-# dependencies = [
-#     "click",
-#     "plotext",
-#     "plottypus[kitty,notcurses]",
-#     "textual",
-# ]
-# ///
 import io
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -18,16 +9,42 @@ import click
 from rich.text import Text
 from rich.console import Console
 from textual.app import App, ComposeResult
-from textual.containers import Center
+from textual.containers import Container
 from textual.widget import Widget
-from textual.widgets import Footer, Header, Markdown, Static
+from textual.widgets import Footer, Markdown, Static
 from rich.panel import Panel
+from textual.css.query import QueryError
 
 from typing import Any
 
 
+from textual.theme import Theme
+
+my_theme = Theme(
+    name="my",
+    primary="#0000c0",
+    secondary="#4040ff",
+    accent="#00ff00",
+    foreground="#444444",
+    background="#ffffff",
+    success="#A3BE8C",
+    warning="#EBCB8B",
+    error="#BF616A",
+    surface="#ffffff",
+    panel="#ffffff",
+    dark=False,
+    variables={
+        "block-cursor-text-style": "none",
+        "footer-key-foreground": "#88C0D0",
+        "input-selection-background": "#81a1c1 35%",
+    },
+)
+
+
 class PresentationApp(App):
     """A Textual app for the presentation."""
+
+    CSS_PATH = Path("presentation.css")
 
     BINDINGS = [
         ("pageup", "prev_slide", "Previous"),
@@ -36,7 +53,7 @@ class PresentationApp(App):
         ("q", "quit", "Quit"),
         ("home", "home", "First slide"),
         ("e", "edit", "Edit"),
-        ("d", "toggle_dark", "Toggle dark mode")
+        # ("d", "toggle_dark", "Toggle dark mode")
     ]
 
     TITLE = "▃█▅ Terminal plotting"
@@ -52,12 +69,13 @@ class PresentationApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         # yield Header(show_clock=True)
-        yield Center(Markdown("Loading..."), id="content")
+        yield Container(Markdown("Loading..."), id="content")
         yield Footer()
 
     def on_mount(self) -> None:
         """Hook called when the app is mounted."""
-        self.theme = "textual-light"
+        self.register_theme(my_theme) 
+        self.theme = "my"
         self.update_slide()
 
     def on_resize(self) -> None:
@@ -78,7 +96,7 @@ class PresentationApp(App):
 
     def action_home(self) -> None:
         self.switch_to_slide(0)
-        
+
     def switch_to_slide(self, index: int) -> None:
         curent_index = self.slide_index
         if index != curent_index:
@@ -104,11 +122,14 @@ class PresentationApp(App):
             self.refresh()
 
     def update_slide(self):
-        container_widget = self.query_one("#content", Center)
-        content_widget = SLIDES[self.slide_index].render(app=self)
-        container_widget.remove_children()
-        container_widget.mount(content_widget)
-        Path(".current_slide").write_text(str(self.slide_index))
+        try:
+            container_widget = self.query_one("#content", Container)
+            content_widget = SLIDES[self.slide_index].render(app=self)
+            container_widget.remove_children()
+            container_widget.mount(content_widget)
+            Path(".current_slide").write_text(str(self.slide_index))
+        except QueryError:
+            pass
 
 
 @click.command()
@@ -154,6 +175,7 @@ class CodeSlide(Slide):
     requires_alt_screen: bool = False
     runnable: ClassVar[bool] = True
     wait_for_key: bool = True
+    title: Optional[str] = None
 
     def render(self, app) -> Widget:
         match self.mode:
@@ -166,6 +188,8 @@ class CodeSlide(Slide):
                 return self._render_output()
 
     def _render_code(self) -> Markdown:
+        if self.title:
+            return Markdown(f"## {self.title}\n\n```{self.language}\n{self.source.strip()}\n```")
         return Markdown(f"```{self.language}\n{self.source.strip()}\n```")
 
     def _render_output(self) -> Widget:
@@ -181,9 +205,15 @@ class CodeSlide(Slide):
             )
             self._exec()
         output = f.getvalue()
-        output = "\n".join(line.rstrip() for line in output.splitlines())
-        return Static(Text.from_ansi(output))
-    
+        output = "\n".join(" " + line.rstrip() for line in output.splitlines())
+        output_widget = Static(Text.from_ansi(output))
+        if self.title:
+            return Container(
+                Markdown(f"## {self.title}"),
+                output_widget
+            )
+        return output_widget
+
     def _exec(self):
         match self.language:
             case "python":
@@ -247,10 +277,26 @@ def dyn_md(f: Callable[[App], Any]):
 def terminal_is_your_weapon(app: App):
     dims = app.size
 
-    return f"""\
-    ## Terminal is your weapon:
+    console = Console()
+    console.color_system
 
-    Reported size: *{dims.width}* x *{dims.height}*
+    return f"""\
+    ## (Modern) Terminal is your weapon
+
+    - reports size: *{dims.width}* x *{dims.height}*
+
+    - supports colours: {console.color_system}
+
+    - supports ASCII: 
+
+        \* # o . - | x
+    
+    - supports Unicode symbols:
+
+        │ ─┌ ┐ └ ┘ ┼ ┴ ┬ █ 
+
+    - supports alternate screen
+        
     """
 
 @dyn_md
@@ -261,7 +307,7 @@ def colours(app: App):
     for high in range(16):
         for low in range(16):
             colour = low + high * 16
-            out.write(f"\033[38;5;{colour}m██\033[0m")
+            out.write(f"\033[38;5;{colour}m███\033[0m")
         out.write("\n")
     return Text.from_ansi(out.getvalue())
 
@@ -280,6 +326,8 @@ def py(path_or_text: str, **kwargs):
     }
     if Path(path_or_text).exists():
         kwargs["path"] = path_or_text
+        if "title" not in kwargs:
+            kwargs["title"] = path_or_text
     else:
         kwargs["source"] = path_or_text
     return CodeSlide(**kwargs)
@@ -296,17 +344,24 @@ SLIDES = [
     # TODO: Read from toml/yaml, ...
     md("slides/title.md"),
     py("examples/spurious_correlations.py", mode="output"),
-    md("## Why?"),
-    sh("# Others use it too\n\nytop -I 1/20", language="shell", requires_alt_screen=True, wait_for_key=False),
-    md("## How?"),
+    md("# Why?"),
+    md("## 1) It's cool."),
+    # md("## 2) Others use it too."),
+    sh("ytop -I 1/20", title="2) Others use it too.", language="shell", requires_alt_screen=True, wait_for_key=False),
+    md("## 3) Quickly visualise your script output"),
+    md("## 4) Create embeddable ASCII plots"),
+    md("# How?"),
     terminal_is_your_weapon,
+    md("## Example: Simple barchart\nPopulation of Czech cities"),
     py("slides/simple_bar.py"),
     py("slides/simple_bar_unicode.py", mode="output"),
+    md("slides/colours.md"),
     py("slides/colours1.py"),
     py("slides/colours2.py", mode="output"),
     py("slides/colours_rich.py", mode="output"),
-    py("slides/simple_bar_color.py", mode="output"),
-    md("## Aren't we reinventing the wheel?"),
+    md("## Example: Simple scatter plot\nMap of Czech cities"),
+    py("slides/simple_scatter.py"),
+    md("# Aren't we reinventing the wheel?"),
     py("slides/hello.py"),
     py("slides/hello2.py"),
     md("## What if..."),

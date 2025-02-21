@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["plottypus[all]>=0.2.0", "textual>=1.0.0"]
+dependencies = [
+    "plottypus[all]>=0.2.0",
+    "textual>=1.0.0",
+    "click",
+    "polars>=1.22.0",
+    "pandas>=2.2.3",
+]
