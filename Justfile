@@ -4,6 +4,9 @@ marp-flags := "--allow-local-files --browser chrome --browser-path `which brave-
 run:
     uv run --script presentation.py
 
+continue:
+    uv run --script presentation.py --continue
+
 pdf:
     npx {{ marp-package }} presentation/talk.md --pdf {{ marp-flags }}
 

@@ -1,24 +1,27 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
+#     "click",
 #     "plotext",
 #     "plottypus[kitty,notcurses]",
 #     "textual",
 # ]
 # ///
+import io
 from abc import ABC, abstractmethod
 from pathlib import Path
 from textwrap import dedent
 from dataclasses import dataclass, field
-from typing import Optional, ClassVar, Literal
+from typing import Optional, ClassVar, Literal, Callable
 
-
+import click
 from rich.text import Text
 from rich.console import Console
 from textual.app import App, ComposeResult
 from textual.containers import Center
 from textual.widget import Widget
 from textual.widgets import Footer, Header, Markdown, Static
+from rich.panel import Panel
 
 from typing import Any
 
@@ -48,13 +51,17 @@ class PresentationApp(App):
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
-        yield Header(show_clock=True)
+        # yield Header(show_clock=True)
         yield Center(Markdown("Loading..."), id="content")
         yield Footer()
 
     def on_mount(self) -> None:
         """Hook called when the app is mounted."""
         self.theme = "textual-light"
+        self.update_slide()
+
+    def on_resize(self) -> None:
+        """Hook called when the app is resized."""
         self.update_slide()
 
     def action_toggle_dark(self) -> None:
@@ -64,16 +71,19 @@ class PresentationApp(App):
         )
 
     def action_next_slide(self) -> None:
-        self.slide_index = min(self.slide_index + 1, len(SLIDES) - 1)
-        self.update_slide()
+        self.switch_to_slide(min(self.slide_index + 1, len(SLIDES) - 1))
 
     def action_prev_slide(self) -> None:
-        self.slide_index = max(self.slide_index - 1, 0)
-        self.update_slide()
+        self.switch_to_slide(max(self.slide_index - 1, 0))
 
     def action_home(self) -> None:
-        self.slide_index = 0
-        self.update_slide()
+        self.switch_to_slide(0)
+        
+    def switch_to_slide(self, index: int) -> None:
+        curent_index = self.slide_index
+        if index != curent_index:
+            self.slide_index = index
+            self.update_slide()
 
     def action_edit(self) -> None:
         if self.current_slide.path:
@@ -84,7 +94,7 @@ class PresentationApp(App):
         self.update_slide()
 
     @property
-    def current_slide(self) -> Any:
+    def current_slide(self) -> "Slide":
         return SLIDES[self.slide_index]
 
     def action_run(self) -> None:
@@ -98,10 +108,16 @@ class PresentationApp(App):
         content_widget = SLIDES[self.slide_index].render(app=self)
         container_widget.remove_children()
         container_widget.mount(content_widget)
+        Path(".current_slide").write_text(str(self.slide_index))
 
 
-def main():
+@click.command()
+@click.option("--continue", "-c", "continue_", is_flag=True, help="Enable debug mode.")
+def main(continue_):
     app = PresentationApp()
+    if continue_ and Path(".current_slide").exists():
+        app.slide_index = int(Path(".current_slide").read_text())
+    app.slide_index = min(app.slide_index, len(SLIDES) - 1)
     app.run()
 
 
@@ -186,6 +202,7 @@ class CodeSlide(Slide):
             self._exec()
             if self.wait_for_key:
                 self._wait_for_key()
+            self.mode = "code"
             console.clear()
 
     def _wait_for_key(self):
@@ -202,10 +219,52 @@ class CodeSlide(Slide):
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
-
 class MarkdownSlide(Slide):
     def render(self, app: App) -> Markdown:
         return Markdown(dedent(self.source))
+
+@dataclass
+class FuncSlide(Slide):
+    f: Callable[[App], Markdown | Text | str] = field(kw_only=True)
+    source = ""   # ignored
+    path = None   # ignored
+
+    def render(self, app: App):
+        rendered = self.f(app)
+        if isinstance(rendered, Widget):
+            return rendered
+        elif isinstance(rendered, str):
+            return Markdown(dedent(rendered))
+        elif isinstance(rendered, (Text, Panel)):
+            return Static(rendered)
+
+
+def dyn_md(f: Callable[[App], Any]):
+    return FuncSlide(f=f)
+
+
+@dyn_md
+def terminal_is_your_weapon(app: App):
+    dims = app.size
+
+    return f"""\
+    ## Terminal is your weapon:
+
+    Reported size: *{dims.width}* x *{dims.height}*
+    """
+
+@dyn_md
+def colours(app: App):
+    out = io.StringIO()
+    out.write("## Colours\n\n")
+
+    for high in range(16):
+        for low in range(16):
+            colour = low + high * 16
+            out.write(f"\033[38;5;{colour}m██\033[0m")
+        out.write("\n")
+    return Text.from_ansi(out.getvalue())
+
 
 def md(path_or_text: str, **kwargs):
     if Path(path_or_text).exists():
@@ -237,12 +296,21 @@ SLIDES = [
     # TODO: Read from toml/yaml, ...
     md("slides/title.md"),
     py("examples/spurious_correlations.py", mode="output"),
-    sh("ytop -I 1/20", language="shell", requires_alt_screen=True, wait_for_key=False),
-    md("## Colours"),
-    py('print("\\033[31m Red text \\033[0m")  # Red text'),
+    md("## Why?"),
+    sh("# Others use it too\n\nytop -I 1/20", language="shell", requires_alt_screen=True, wait_for_key=False),
+    md("## How?"),
+    terminal_is_your_weapon,
+    py("slides/simple_bar.py"),
+    py("slides/simple_bar_unicode.py", mode="output"),
     py("slides/colours1.py"),
+    py("slides/colours2.py", mode="output"),
+    py("slides/colours_rich.py", mode="output"),
+    py("slides/simple_bar_color.py", mode="output"),
+    md("## Aren't we reinventing the wheel?"),
     py("slides/hello.py"),
     py("slides/hello2.py"),
+    md("## What if..."),
+    md("## ...we could actually use matplotlib in the terminal?"),
     py("slides/kitty.py", requires_alt_screen=True),
     md("# Thank you!")
 ]

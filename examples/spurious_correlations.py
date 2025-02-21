@@ -10,6 +10,8 @@
 import polars as pl
 import plotext as plt
 
+plt.clear_figure()
+
 #rich.print("[bold]Spurious correlations by Tyler Vigen[/bold]")
 #rich.print("[blue]https://tylervigen.com/spurious/correlation/10357_jet-fuel-used-in-czechia_correlates-with_total-number-of-successful-mount-everest-climbs[/blue]")
 
