@@ -124,7 +124,11 @@ class CodeSlide(Slide):
             console = Console()
             console.clear()
             exec(self.source)
-            Prompt.ask("[yellow]Press Enter to continue...[/yellow]")
+            console.control()
+            _wait_for_key()
+
+def _wait_for_key():
+    Prompt.ask("[yellow]Press Enter to continue...[/yellow]")
 
 
 @dataclass
