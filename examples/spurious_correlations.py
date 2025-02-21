@@ -9,10 +9,9 @@
 # ///
 import polars as pl
 import plotext as plt
-import rich
 
-rich.print("[bold]Spurious correlations by Tyler Vigen[/bold]")
-rich.print("[blue]https://tylervigen.com/spurious/correlation/10357_jet-fuel-used-in-czechia_correlates-with_total-number-of-successful-mount-everest-climbs[/blue]")
+#rich.print("[bold]Spurious correlations by Tyler Vigen[/bold]")
+#rich.print("[blue]https://tylervigen.com/spurious/correlation/10357_jet-fuel-used-in-czechia_correlates-with_total-number-of-successful-mount-everest-climbs[/blue]")
 
 data = pl.DataFrame({
     "Year": range(1993, 2012),
@@ -27,6 +26,7 @@ plt.plot(
     label="Jet fuel used in Czechia",
     yside = "left"
 )
+plt.plot_size(50, 15)
 plt.plot(
     data["Year"],
     data["Total Number of Successful Mount Everest Climbs"],
