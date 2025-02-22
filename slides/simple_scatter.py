@@ -12,9 +12,7 @@ for name, data in df.iloc[::-1].iterrows():
     x = int((lon - min_lon) / (max_lon - min_lon) * WIDTH)
     y = int((max_lat - lat) / (max_lat - min_lat) * HEIGHT)
     frac = np.clip(data["population"] / 450_000, 0.1, 1)
-    r = int(255 * frac)
-    g = 255 - r
-    b = 255 - r
+    r = int(255 * frac); g = 255 - r // 2; b = 255 - r // 2
     color_ansi = f"\033[38;2;{r};{g};{b}m"
     plotting_area[y][x] = color_ansi + name[0]
 

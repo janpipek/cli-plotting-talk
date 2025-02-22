@@ -5,3 +5,7 @@
 - 240 additional colours (fixed palette)
 
 - 24bit true colours
+
+Use libraries
+
+- rich

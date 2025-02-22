@@ -2,7 +2,7 @@
 
 - can be fun
 - can be useful
-- can be easy if use proper libraries*
+- can be easy if using proper libraries*
 
 *conditions apply
 
