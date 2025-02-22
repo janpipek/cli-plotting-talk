@@ -72,7 +72,9 @@ class PresentationApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         # yield Header(show_clock=True)
-        yield VerticalScroll(Markdown("Loading..."), id="content", can_focus=False)
+        yield VerticalScroll(
+            Markdown("Loading..."), id="content", can_focus=False
+        )
         if self.enable_footer:
             yield Footer()
 
@@ -145,9 +147,7 @@ class PresentationApp(App):
 @click.option(
     "--continue", "-c", "continue_", is_flag=True, help="Enable debug mode."
 )
-@click.option(
-    "--disable-footer", is_flag=True, help="Disable footer."
-)
+@click.option("--disable-footer", is_flag=True, help="Disable footer.")
 def main(continue_, disable_footer):
     app = PresentationApp()
     app.enable_footer = not disable_footer
@@ -227,7 +227,9 @@ class CodeSlide(Slide):
         except Exception as ex:
             output = f"Error: {ex}"
         else:
-            output = "\n".join(" " + line.rstrip() for line in output.splitlines())
+            output = "\n".join(
+                " " + line.rstrip() for line in output.splitlines()
+            )
         output_widget = Static(Text.from_ansi(output))
         if self.title:
             return Container(Markdown(f"## {self.title}"), output_widget)
@@ -245,6 +247,7 @@ class CodeSlide(Slide):
                     },
                 )
                 import plotext as plt
+
                 plt.clear_figure()
             case "shell":
                 import os
@@ -376,7 +379,12 @@ def sh(cmd, **kwargs):
 SLIDES = [
     # TODO: Read from toml/yaml, ...
     md("slides/title.md"),
-    py("examples/spurious_correlations.py", title="Czech jet fuel consumption vs successful climbs of Mt. Everest", mode="output"),
+    py(
+        "examples/spurious_correlations.py",
+        title="Czech jet fuel consumption vs successful climbs of Mt. Everest\n\n"
+        "from Spurious correlations by Tyler Vigen",
+        mode="output",
+    ),
     md("# Why?"),
     py("slides/neo.py", title="1) It's cool.", mode="output"),
     # md("## 2) Others use it too."),
@@ -397,7 +405,7 @@ SLIDES = [
     md("slides/colours.md"),
     py("slides/colours1.py"),
     py("slides/colours256.py", mode="output"),
-    py("slides/colours_rich.py"),
+    # py("slides/colours_rich.py"),
     md("## Example: Simple scatter plot\nMap of Czech cities"),
     py("slides/simple_scatter.py"),
     md("## Example: Add the path of my train trip to Brno"),
@@ -409,10 +417,12 @@ SLIDES = [
     py("slides/plotext_hist.py"),
     py("slides/plotext_lines.py", requires_alt_screen=True),
     md("## What if..."),
-    md("## ...we could actually use matplotlib in the terminal?\nkitty save us!"),
+    md(
+        "## ...we could actually use matplotlib in the terminal?\nkitty save us!"
+    ),
     py("slides/kitty.py", requires_alt_screen=True),
     md("slides/final.md"),
-    md("slides/references.md")
+    md("slides/references.md"),
 ]
 
 
