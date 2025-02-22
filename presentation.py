@@ -83,7 +83,7 @@ class PresentationApp(App):
         self.register_theme(my_theme)
         self.theme = "my"
         self.update_slide()
-
+        
     def on_resize(self) -> None:
         """Hook called when the app is resized."""
         self.update_slide()
@@ -189,6 +189,7 @@ class CodeSlide(Slide):
     runnable: ClassVar[bool] = True
     wait_for_key: bool = True
     title: Optional[str] = None
+    is_title_markdown: bool = False
 
     def render(self, app) -> Widget:
         match self.mode:
@@ -207,6 +208,8 @@ class CodeSlide(Slide):
             if "# HIDE" not in line
         )
         if self.title:
+            if self.is_title_markdown:
+                return Markdown(self.title + f"\n\n```{self.language}\n{code}\n```")
             return Markdown(
                 f"## {self.title}\n\n```{self.language}\n{code}\n```"
             )
@@ -218,12 +221,17 @@ class CodeSlide(Slide):
 
         f = io.StringIO()
         try:
-            with redirect_stdout(f):
-                import plotext as plt
+            match self.language:
+                case "python":
+                    with redirect_stdout(f):
+                        import plotext as plt
 
-                plt.plotsize(width=50, height=15)
-                self._exec(app=app)
-            output = f.getvalue()
+                        plt.plotsize(width=50, height=15)
+                        self._exec(app=app)
+                    output = f.getvalue()
+                case "shell":
+                    import subprocess
+                    output = subprocess.check_output(self.source, shell=True).decode("utf-8")  
         except Exception as ex:
             output = f"Error: {ex}"
         else:
@@ -232,6 +240,8 @@ class CodeSlide(Slide):
             )
         output_widget = Static(Text.from_ansi(output))
         if self.title:
+            if self.is_title_markdown:
+                return Container(Markdown(self.title), output_widget)
             return Container(Markdown(f"## {self.title}"), output_widget)
         return output_widget
 
@@ -322,7 +332,7 @@ def terminal_is_your_weapon(app: App):
 
     - supports ASCII: 
 
-        \* # o . - | x
+        \\* # o . - | x
     
     - supports Unicode symbols:
 
@@ -375,10 +385,20 @@ def sh(cmd, **kwargs):
     }
     return CodeSlide(source=cmd, **kwargs)
 
+title = sh(
+    "qrencode -t utf8i https://github.com/janpipek/cli-plotting-talk",
+    title=Path("slides/title.md").read_text(),
+    is_title_markdown=True,
+    mode="output",
+    requires_alt_screen=False,
+    # requires_alt_screen=True,
+)
+
 
 SLIDES = [
     # TODO: Read from toml/yaml, ...
-    md("slides/title.md"),
+    # md("slides/title.md"),
+    title,
     py(
         "examples/spurious_correlations.py",
         title="Czech jet fuel consumption vs successful climbs of Mt. Everest\n\n"
