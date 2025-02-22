@@ -6,3 +6,5 @@
 
 *conditions apply
 
+- https://github.com/janpipek/cli-plotting-talk
+- https://github.com/janpipek/plottypus

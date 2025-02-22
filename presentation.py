@@ -44,6 +44,8 @@ my_theme = Theme(
 class PresentationApp(App):
     """A Textual app for the presentation."""
 
+    enable_footer: bool = True
+
     CSS_PATH = Path("presentation.css")
 
     BINDINGS = [
@@ -70,8 +72,9 @@ class PresentationApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         # yield Header(show_clock=True)
-        yield VerticalScroll(Markdown("Loading..."), id="content")
-        yield Footer()
+        yield VerticalScroll(Markdown("Loading..."), id="content", can_focus=False)
+        if self.enable_footer:
+            yield Footer()
 
     def on_mount(self) -> None:
         """Hook called when the app is mounted."""
@@ -142,8 +145,12 @@ class PresentationApp(App):
 @click.option(
     "--continue", "-c", "continue_", is_flag=True, help="Enable debug mode."
 )
-def main(continue_):
+@click.option(
+    "--disable-footer", is_flag=True, help="Disable footer."
+)
+def main(continue_, disable_footer):
     app = PresentationApp()
+    app.enable_footer = not disable_footer
     if continue_ and Path(".current_slide").exists():
         app.slide_index = int(Path(".current_slide").read_text())
     app.slide_index = min(app.slide_index, len(SLIDES) - 1)
@@ -394,7 +401,7 @@ SLIDES = [
     md("## Example: Simple scatter plot\nMap of Czech cities"),
     py("slides/simple_scatter.py"),
     md("## Example: Add the path of my train trip to Brno"),
-    md("# Aren't we reinventing the wheel?"),
+    md("# Aren't we reinventing the wheel?\n\nI actually was/am..."),
     md("slides/libraries.md"),
     py("slides/plotille_line.py", requires_alt_screen=True),
     py("slides/plotille_hist.py"),
