@@ -20,6 +20,71 @@ from typing import Any
 
 from textual.theme import Theme
 
+@click.command()
+@click.option(
+    "--continue", "-c", "continue_", is_flag=True, help="Enable debug mode."
+)
+@click.option("--disable-footer", is_flag=True, help="Disable footer.")
+def main(continue_, disable_footer):
+    """Run the presentation deck."""
+
+    # *** DEFINITION OF THE SLIDES ***
+    # TODO: Read from toml/yaml, ...
+    slides = [
+        title,
+        py(
+            "examples/spurious_correlations.py",
+            title="Czech jet fuel consumption vs successful climbs of Mt. Everest\n\n"
+            "from Spurious correlations by Tyler Vigen",
+            mode="output",
+        ),
+        md("# Why?"),
+        py("slides/neo.py", title="1) It's cool.", mode="output"),
+        # md("## 2) Others use it too."),
+        # sh(
+        #    "ytop -I 1/20",
+        md(
+           "## 2) Others use it too.\n\n"
+           "## 3) Quickly visualise your script output.\n\n"
+           "## 4) Create embeddable ASCII plots\n\n"
+        ),
+        md("# How?"),
+        terminal_is_your_weapon,
+        md("## Example: Simple barchart\nPopulation of Czech cities"),
+        py("slides/simple_bar.py"),
+        py("slides/simple_bar_unicode.py", mode="output"),
+        md("slides/colours.md"),
+        py("slides/colours1.py"),
+        py("slides/colours256.py", mode="output"),
+        # py("slides/colours_rich.py"),
+        md("## Example: Simple scatter plot\nMap of Czech cities"),
+        py("slides/simple_scatter.py"),
+        md("## Example: Add the path of my train trip to Brno"),
+        md("# Aren't we reinventing the wheel?\n\nI actually was/am..."),
+        md("slides/libraries.md"),
+        md("## plotille\n\nby Matto Ippen"),
+        py("slides/plotille_line.py", requires_alt_screen=True),
+        py("slides/plotille_hist.py"),
+        md("## plotext\n\nby @piccolomo"),
+        py("examples/spurious_correlations.py"),
+        py("slides/plotext_hist.py"),
+        py("slides/plotext_lines.py", requires_alt_screen=True),
+        md("## What if..."),
+        md(
+            "## ...we could actually use matplotlib in the terminal?\nkitty save us!"
+        ),
+        py("slides/kitty.py", requires_alt_screen=True),
+        md("slides/final.md"),
+        md("slides/references.md"),
+    ]
+
+    app = PresentationApp(slides)
+    app.enable_footer = not disable_footer
+    if continue_ and Path(".current_slide").exists():
+        app.slide_index = int(Path(".current_slide").read_text())
+    app.slide_index = min(app.slide_index, len(slides) - 1)
+    app.run()
+
 my_theme = Theme(
     name="my",
     primary="#0000c0",
@@ -69,6 +134,10 @@ class PresentationApp(App):
 
     slide_index: int = 0
 
+    def __init__(self, slides, **kwargs):
+        self.slides = slides
+        super().__init__(**kwargs)
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         # yield Header(show_clock=True)
@@ -83,7 +152,7 @@ class PresentationApp(App):
         self.register_theme(my_theme)
         self.theme = "my"
         self.update_slide()
-        
+
     def on_resize(self) -> None:
         """Hook called when the app is resized."""
         self.update_slide()
@@ -99,7 +168,7 @@ class PresentationApp(App):
         self.update_slide()
 
     def action_next_slide(self) -> None:
-        self.switch_to_slide(min(self.slide_index + 1, len(SLIDES) - 1))
+        self.switch_to_slide(min(self.slide_index + 1, len(self.slides) - 1))
 
     def action_prev_slide(self) -> None:
         self.switch_to_slide(max(self.slide_index - 1, 0))
@@ -124,7 +193,7 @@ class PresentationApp(App):
 
     @property
     def current_slide(self) -> "Slide":
-        return SLIDES[self.slide_index]
+        return self.slides[self.slide_index]
 
     def action_run(self) -> None:
         if self.current_slide.runnable:
@@ -135,26 +204,12 @@ class PresentationApp(App):
     def update_slide(self):
         try:
             container_widget = self.query_one("#content", VerticalScroll)
-            content_widget = SLIDES[self.slide_index].render(app=self)
+            content_widget = self.slides[self.slide_index].render(app=self)
             container_widget.remove_children()
             container_widget.mount(content_widget)
             Path(".current_slide").write_text(str(self.slide_index))
         except QueryError:
             pass
-
-
-@click.command()
-@click.option(
-    "--continue", "-c", "continue_", is_flag=True, help="Enable debug mode."
-)
-@click.option("--disable-footer", is_flag=True, help="Disable footer.")
-def main(continue_, disable_footer):
-    app = PresentationApp()
-    app.enable_footer = not disable_footer
-    if continue_ and Path(".current_slide").exists():
-        app.slide_index = int(Path(".current_slide").read_text())
-    app.slide_index = min(app.slide_index, len(SLIDES) - 1)
-    app.run()
 
 
 @dataclass()
@@ -183,6 +238,8 @@ class Slide(ABC):
 
 @dataclass
 class CodeSlide(Slide):
+    """Slide with runnable code from external file or string."""
+
     language: str = "python"
     mode: Literal["code", "output"] = "code"
     requires_alt_screen: bool = False
@@ -231,7 +288,7 @@ class CodeSlide(Slide):
                     output = f.getvalue()
                 case "shell":
                     import subprocess
-                    output = subprocess.check_output(self.source, shell=True).decode("utf-8")  
+                    output = subprocess.check_output(self.source, shell=True).decode("utf-8")
         except Exception as ex:
             output = f"Error: {ex}"
         else:
@@ -292,12 +349,14 @@ class CodeSlide(Slide):
 
 
 class MarkdownSlide(Slide):
+    """Markdown slide with source from external file or string."""
     def render(self, app: App) -> Markdown:
         return Markdown(dedent(self.source))
 
 
 @dataclass
 class FuncSlide(Slide):
+    """Any slide created from a function."""
     f: Callable[[App], Markdown | Text | str] = field(kw_only=True)
     source = ""  # ignored
     path = None  # ignored
@@ -330,16 +389,16 @@ def terminal_is_your_weapon(app: App):
 
     - supports colours: {console.color_system}
 
-    - supports ASCII: 
+    - supports ASCII:
 
         \\* # o . - | x
-    
+
     - supports Unicode symbols:
 
-        │ ─┌ ┐ └ ┘ ┼ ┴ ┬ █ 
+        │ ─┌ ┐ └ ┘ ┼ ┴ ┬ █
 
     - supports alternate screen
-        
+
     """
 
 
@@ -357,6 +416,7 @@ def colours(app: App):
 
 
 def md(path_or_text: str, **kwargs):
+    """Helper function to create a Markdown slide."""
     if Path(path_or_text).exists():
         kwargs["path"] = path_or_text
     else:
@@ -365,6 +425,7 @@ def md(path_or_text: str, **kwargs):
 
 
 def py(path_or_text: str, **kwargs):
+    """Helper function to create a Python code slide."""
     kwargs = {
         "language": "python",
         **kwargs,
@@ -379,6 +440,7 @@ def py(path_or_text: str, **kwargs):
 
 
 def sh(cmd, **kwargs):
+    """Helper function to create a shell command slide."""
     kwargs = {
         "language": "shell",
         **kwargs,
@@ -393,57 +455,6 @@ title = sh(
     requires_alt_screen=False,
     # requires_alt_screen=True,
 )
-
-
-SLIDES = [
-    # TODO: Read from toml/yaml, ...
-    # md("slides/title.md"),
-    title,
-    py(
-        "examples/spurious_correlations.py",
-        title="Czech jet fuel consumption vs successful climbs of Mt. Everest\n\n"
-        "from Spurious correlations by Tyler Vigen",
-        mode="output",
-    ),
-    md("# Why?"),
-    py("slides/neo.py", title="1) It's cool.", mode="output"),
-    # md("## 2) Others use it too."),
-    # sh(
-    #    "ytop -I 1/20",
-    md( 
-       "## 2) Others use it too.\n\n"
-       "## 3) Quickly visualise your script output.\n\n"
-       "## 4) Create embeddable ASCII plots\n\n"
-    ),
-    md("# How?"),
-    terminal_is_your_weapon,
-    md("## Example: Simple barchart\nPopulation of Czech cities"),
-    py("slides/simple_bar.py"),
-    py("slides/simple_bar_unicode.py", mode="output"),
-    md("slides/colours.md"),
-    py("slides/colours1.py"),
-    py("slides/colours256.py", mode="output"),
-    # py("slides/colours_rich.py"),
-    md("## Example: Simple scatter plot\nMap of Czech cities"),
-    py("slides/simple_scatter.py"),
-    md("## Example: Add the path of my train trip to Brno"),
-    md("# Aren't we reinventing the wheel?\n\nI actually was/am..."),
-    md("slides/libraries.md"),
-    md("## plotille\n\nby Matto Ippen"),
-    py("slides/plotille_line.py", requires_alt_screen=True),
-    py("slides/plotille_hist.py"),
-    md("## plotext\n\nby @piccolomo"),
-    py("examples/spurious_correlations.py"),
-    py("slides/plotext_hist.py"),
-    py("slides/plotext_lines.py", requires_alt_screen=True),
-    md("## What if..."),
-    md(
-        "## ...we could actually use matplotlib in the terminal?\nkitty save us!"
-    ),
-    py("slides/kitty.py", requires_alt_screen=True),
-    md("slides/final.md"),
-    md("slides/references.md"),
-]
 
 
 if __name__ == "__main__":
