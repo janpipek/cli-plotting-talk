@@ -448,7 +448,7 @@ def sh(cmd, **kwargs):
     return CodeSlide(source=cmd, **kwargs)
 
 title = sh(
-    "qrencode -t utf8i https://github.com/janpipek/cli-plotting-talk",
+    "cat qr.txt",
     title=Path("slides/title.md").read_text(),
     is_title_markdown=True,
     mode="output",
