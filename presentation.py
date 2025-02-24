@@ -324,7 +324,7 @@ def terminal_is_your_weapon(app: App):
     console.color_system
 
     return f"""\
-    ## (Modern) Terminal is your weapon
+    ## (Modern) Terminal emulator is your weapon
 
     - reports size: *{dims.width}* x *{dims.height}*
 
@@ -408,15 +408,13 @@ SLIDES = [
     md("# Why?"),
     py("slides/neo.py", title="1) It's cool.", mode="output"),
     # md("## 2) Others use it too."),
-    sh(
-        "ytop -I 1/20",
-        title="2) Others use it too.",
-        language="shell",
-        requires_alt_screen=True,
-        wait_for_key=False,
+    # sh(
+    #    "ytop -I 1/20",
+    md( 
+       "## 2) Others use it too.\n\n"
+       "## 3) Quickly visualise your script output.\n\n"
+       "## 4) Create embeddable ASCII plots\n\n"
     ),
-    md("## 3) Quickly visualise your script output"),
-    md("## 4) Create embeddable ASCII plots"),
     md("# How?"),
     terminal_is_your_weapon,
     md("## Example: Simple barchart\nPopulation of Czech cities"),
@@ -431,8 +429,10 @@ SLIDES = [
     md("## Example: Add the path of my train trip to Brno"),
     md("# Aren't we reinventing the wheel?\n\nI actually was/am..."),
     md("slides/libraries.md"),
+    md("## plotille\n\nby Matto Ippen"),
     py("slides/plotille_line.py", requires_alt_screen=True),
     py("slides/plotille_hist.py"),
+    md("## plotext\n\nby @piccolomo"),
     py("examples/spurious_correlations.py"),
     py("slides/plotext_hist.py"),
     py("slides/plotext_lines.py", requires_alt_screen=True),
