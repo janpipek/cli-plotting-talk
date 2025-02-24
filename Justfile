@@ -12,3 +12,6 @@ continue:
 
 format:
     uvx ruff format presentation.py slides/*.py
+
+qr:
+    qrencode -t utf8i https://github.com/janpipek/cli-plotting-talk
